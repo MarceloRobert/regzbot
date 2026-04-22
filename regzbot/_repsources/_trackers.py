@@ -11,21 +11,35 @@ import re
 import regzbot
 
 
-class _activity():
+class _activity:
     def __str__(self):
-        return _describe(self, ('created_at', 'message', 'realname', 'summary', 'username', 'web_url'))
+        return _describe(
+            self,
+            ('created_at', 'message', 'realname', 'summary', 'username', 'web_url'),
+        )
 
 
-class _issue():
+class _issue:
     def __str__(self):
-        return _describe(self, ('created_at', 'message', 'realname', 'state', 'summary', 'username', 'web_url'))
+        return _describe(
+            self,
+            (
+                'created_at',
+                'message',
+                'realname',
+                'state',
+                'summary',
+                'username',
+                'web_url',
+            ),
+        )
 
     @classmethod
     def activities(cls, *, since=None):
         raise NotImplementedError
 
 
-class _possible_search_result():
+class _possible_search_result:
     def __init__(self, issue_id, pattern, since):
         self.id = issue_id
         self.issue_id = issue_id
@@ -33,7 +47,7 @@ class _possible_search_result():
         self._since = since
 
     def __str__(self):
-        return _describe(self, ('id', ))
+        return _describe(self, ('id',))
 
     def _check_pattern(self, body):
         return bool(re.search(self._pattern, body))
@@ -56,7 +70,9 @@ class _reptrd(regzbot.ReportThread):
     def update(self, since, until, *, actimon=None, triggering_repact=None):
         try:
             for activity in self.activities(since=since, until=until):
-                regzbot._rbcmd.process_activity(activity, actimon=actimon, triggering_repact=triggering_repact)
+                regzbot._rbcmd.process_activity(
+                    activity, actimon=actimon, triggering_repact=triggering_repact
+                )
         except regzbot._rbcmd.RegressionCreatedException:
             # the handled activity contained a #regzbot introduced that created a regression for this issue; during that
             # process all activities (both older and younger) for it will be added by calling this method again, so
@@ -77,7 +93,9 @@ class _repsrc(regzbot.ReportSource):
             check_last = check_started - datetime.timedelta(days=14)
 
         if self.lastchked and self.mininterval:
-            earliest_check = regzbot.timendate_gmtime_to_dt(self.lastchked + self.mininterval)
+            earliest_check = regzbot.timendate_gmtime_to_dt(
+                self.lastchked + self.mininterval
+            )
             if earliest_check > check_started:
                 return
 

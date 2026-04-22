@@ -6,11 +6,13 @@ __author__ = 'Thorsten Leemhuis <linux@leemhuis.info>'
 
 import re
 
-if __name__ != "__main__":
+if __name__ != '__main__':
     import regzbot
+
     logger = regzbot.logger
 else:
     import logging
+
     logger = logging
     # if False:
     if True:
@@ -19,6 +21,7 @@ else:
 
 class RegressionCreatedException(Exception):
     pass
+
 
 class RegressionNotFound(Exception):
     pass
@@ -79,13 +82,19 @@ class RbCmdSingleNew:
 
     def _cmd_duplicate_overthere(self, regression):
         for url in self.parameters.split():
-            reptrd_other = regzbot.ReportThread.from_url(url, repact=self._rbcmd_stack.repact)
+            reptrd_other = regzbot.ReportThread.from_url(
+                url, repact=self._rbcmd_stack.repact
+            )
             regression_created = regression.cmd_duplicate(self, reptrd_other)
             if regression_created:
-                self._rbcmd_stack.add_related_activities(reptrd_other, regression_created)
+                self._rbcmd_stack.add_related_activities(
+                    reptrd_other, regression_created
+                )
 
     def _cmd_duplicate_this(self):
-        reptrd_other = regzbot.ReportThread.from_url(self.parameters.split()[0], repact=self._rbcmd_stack.repact)
+        reptrd_other = regzbot.ReportThread.from_url(
+            self.parameters.split()[0], repact=self._rbcmd_stack.repact
+        )
         regression_other = None
         for actimon in regzbot.RegActivityMonitor.get_by_reptrd(reptrd_other):
             if actimon.regid:
@@ -116,6 +125,7 @@ class RbCmdSingleNew:
     def _cmd_from(self, regression):
         if '<' in self.parameters and '>' in self.parameters:
             from email.utils import parseaddr
+
             realname, username = parseaddr(self.parameters)
         else:
             realname = self.parameters
@@ -138,7 +148,11 @@ class RbCmdSingleNew:
             regression.cmd_monitor(self, url, description)
         except regzbot.RepDownloadError:
             regzbot.UnhandledEvent.add(
-                self.repact.web_url, "unable to relate thread %s, download failed" % url, gmtime=self.repact.gmtime, subject=self.repact.summary)
+                self.repact.web_url,
+                'unable to relate thread %s, download failed' % url,
+                gmtime=self.repact.gmtime,
+                subject=self.repact.summary,
+            )
 
     def _cmd_relatebrief(self, regression):
         url, description = self._parse_link_and_description(self.parameters)
@@ -158,11 +172,19 @@ class RbCmdSingleNew:
         try:
             if not regression.cmd_unlink(self, url):
                 regzbot.UnhandledEvent.add(
-                    self.repact.web_url, "unable to unrelate thread %s, not related yet" % url, gmtime=self.repact.gmtime, subject=self.repact.summary)
+                    self.repact.web_url,
+                    'unable to unrelate thread %s, not related yet' % url,
+                    gmtime=self.repact.gmtime,
+                    subject=self.repact.summary,
+                )
                 return False
         except regzbot.RepDownloadError:
             regzbot.UnhandledEvent.add(
-                self.repact.web_url, "unable to unrelate thread %s, parsing failed" % url, gmtime=self.repact.gmtime, subject=self.repact.summary)
+                self.repact.web_url,
+                'unable to unrelate thread %s, parsing failed' % url,
+                gmtime=self.repact.gmtime,
+                subject=self.repact.summary,
+            )
 
     def process(self, regression, regression_topmost_duplicate):
         regression_created = None
@@ -180,27 +202,35 @@ class RbCmdSingleNew:
             regression_created = self._cmd_introduced(None)
             regression = regression_created
         elif self.cmd in (
-                'backburn',
-                'duplicate',
-                'fix',
-                'from',
-                'inconclusive',
-                'introduced',
-                'relate',
-                'relatebrief',
-                'resolve',
-                'summary',
-                'unbackburn',
-                'unrelate',
+            'backburn',
+            'duplicate',
+            'fix',
+            'from',
+            'inconclusive',
+            'introduced',
+            'relate',
+            'relatebrief',
+            'resolve',
+            'summary',
+            'unbackburn',
+            'unrelate',
         ):
             succeeded = getattr(self, '_cmd_%s' % self.cmd)(regression)
-            if regression_topmost_duplicate and self.cmd not in ('relate', 'relatebrief', 'duplicate'):
+            if regression_topmost_duplicate and self.cmd not in (
+                'relate',
+                'relatebrief',
+                'duplicate',
+            ):
                 # some command needs to act on topmost regression as well
                 getattr(self, '_cmd_%s' % self.cmd)(regression_topmost_duplicate)
                 regression_topmost_duplicate.add_history_event(self)
         else:
             regzbot.UnhandledEvent.add(
-                self.repact.web_url, "unknown regzbot command: %s" % self.cmd, gmtime=self.repact.gmtime, subject=self.repact.summary)
+                self.repact.web_url,
+                'unknown regzbot command: %s' % self.cmd,
+                gmtime=self.repact.gmtime,
+                subject=self.repact.summary,
+            )
             return
 
         # create the history event and let caller know if we created a regression
@@ -221,10 +251,15 @@ class RbCmdStackNew:
     def _add_command(self, cmd, parameters):
         if cmd in ('use', 'report'):
             try:
-                self.reptrd = regzbot.ReportThread.from_url(self._parse_pointer(parameters), repact=self.repact)
+                self.reptrd = regzbot.ReportThread.from_url(
+                    self._parse_pointer(parameters), repact=self.repact
+                )
             except regzbot.RepDownloadError:
                 regzbot.UnhandledEvent.add(
-                    self.repact.web_url, "unable to find a regression for %s", self._parse_pointer(parameters))
+                    self.repact.web_url,
+                    'unable to find a regression for %s',
+                    self._parse_pointer(parameters),
+                )
                 raise RegressionNotFound
             for actimon in regzbot.RegActivityMonitor.get_by_reptrd(self.reptrd):
                 if actimon.regid:
@@ -275,7 +310,7 @@ class RbCmdStackNew:
                 self.regression_topmost_duplicate = duplicate
 
     def _parse_pointer(self, pointer):
-        if not pointer in ('^', '/', '~'):
+        if pointer not in ('^', '/', '~'):
             return pointer
         if not self.reptrd.supports_relatives:
             return self.reptrd.web_url
@@ -289,7 +324,9 @@ class RbCmdStackNew:
     # only should be executed in the contect of commands like duplicate and introduced; and in the latter case only
     # after all commands have been executed
     def add_related_activities(self, reptrd, regression):
-        reptrd.update(None, None, triggering_repact=self.repact, actimon=regression.actimon)
+        reptrd.update(
+            None, None, triggering_repact=self.repact, actimon=regression.actimon
+        )
 
     def process_commands(self):
         def _walk_commands():
@@ -306,7 +343,7 @@ class RbCmdStackNew:
                     yield single_command
 
         regression_created = False
-        assert (self.reptrd)
+        assert self.reptrd
         for single_command in _walk_commands():
             if single_command.cmd == 'introduced':
                 regression_created = single_command.process(self.regression, None)
@@ -320,7 +357,11 @@ class RbCmdStackNew:
                 continue
             if not self.regression:
                 regzbot.UnhandledEvent.add(
-                    self.repact.web_url, "regzbot tag in a thread not associated with a regression", gmtime=self.repact.gmtime, subject=self.repact.summary)
+                    self.repact.web_url,
+                    'regzbot tag in a thread not associated with a regression',
+                    gmtime=self.repact.gmtime,
+                    subject=self.repact.summary,
+                )
                 continue
 
             single_command.process(self.regression, self.regression_topmost_duplicate)
@@ -350,7 +391,11 @@ def _parse(cmd_section):
     #   * the end of the section, as indicated by two newlines; optionally with a ; before the first and
     #     space characters before the second)
     #   * either a newline or a combination of semicolon and space characters that are followed '#regzbot'
-    for cmd_line_raw in re.finditer(r'((^|\n|;\s+)#regzbot\s+)(.*?)(?=(;?\n\s*$|;?\s+#regzbot))', cmd_section, re.MULTILINE | re.IGNORECASE | re.DOTALL):
+    for cmd_line_raw in re.finditer(
+        r'((^|\n|;\s+)#regzbot\s+)(.*?)(?=(;?\n\s*$|;?\s+#regzbot))',
+        cmd_section,
+        re.MULTILINE | re.IGNORECASE | re.DOTALL,
+    ):
         # guess there is a better way to handle "#regzbot activity-\nignore" better, but whatever
         cmd_line = re.sub(r'\-\n', '-', cmd_line_raw[3])
         # remove linebreaks
@@ -362,14 +407,17 @@ def _parse(cmd_section):
         #             optional, as not every command has parameters (optional)
         # - (.*)?: the parameters (optional)
         splitted = re.split(r'^([\^\w-]+)(:?\n?\s+)?(.*)?$', cmd_line)
-        yield(splitted[1], splitted[3])
+        yield (splitted[1], splitted[3])
 
 
 def process_activity(activity, *, triggering_repact=None, actimon=None):
     def _handle_activity(activity, actimon):
         regression = None
-        if re.search(r'((^|\n|;\s+)#regzbot\s+)(ignore-activity|poke)(?=(;?\n\s*$|;?\s+#regzbot))', '\n' +
-                     activity.message + '\n\n', re.MULTILINE | re.IGNORECASE | re.DOTALL):
+        if re.search(
+            r'((^|\n|;\s+)#regzbot\s+)(ignore-activity|poke)(?=(;?\n\s*$|;?\s+#regzbot))',
+            '\n' + activity.message + '\n\n',
+            re.MULTILINE | re.IGNORECASE | re.DOTALL,
+        ):
             ignore_activity = True
         else:
             ignore_activity = False
@@ -392,7 +440,11 @@ def process_activity(activity, *, triggering_repact=None, actimon=None):
         # The following loop locates sections with regzbot commands seperated by newlines;
         #  note, it adds a newline at the start and two at the end of the processed input, as the
         #  regzbot command might be right at its start or end.
-        for cmd_section in re.finditer(r'^\r?\n#regzbot.*?\r?\n(?=\s*\r?\n)$', '\n' + activity.message + '\n\n', re.MULTILINE | re.IGNORECASE | re.DOTALL):
+        for cmd_section in re.finditer(
+            r'^\r?\n#regzbot.*?\r?\n(?=\s*\r?\n)$',
+            '\n' + activity.message + '\n\n',
+            re.MULTILINE | re.IGNORECASE | re.DOTALL,
+        ):
             cmd_stack = RbCmdStackNew(activity, regression)
             try:
                 for command, parameter in _parse(cmd_section[0].replace('\r', '')):
@@ -404,14 +456,19 @@ def process_activity(activity, *, triggering_repact=None, actimon=None):
     def _handle_expected_threads(activity):
         if activity.repsrc.kind != 'lore':
             return
-        for regression in regzbot.RegressionBasic.get_expected_by_subject(activity.summary):
+        for regression in regzbot.RegressionBasic.get_expected_by_subject(
+            activity.summary
+        ):
             for actimon in regzbot.RegActivityMonitor.get_by_reptrd(activity.reptrd):
                 if actimon.regid == regression.regid:
                     # already monitored, nothing to do
                     return
             cmd_stack = RbCmdStackNew(activity, regression)
-            cmd_stack._add_command('relate', "%s %s [implicit, subject is expected]" %
-                                   (activity.web_url, activity.summary))
+            cmd_stack._add_command(
+                'relate',
+                '%s %s [implicit, subject is expected]'
+                % (activity.web_url, activity.summary),
+            )
             cmd_stack.process_commands()
 
     def _handle_msgs_linking_regressions(activity):
@@ -424,7 +481,11 @@ def process_activity(activity, *, triggering_repact=None, actimon=None):
             return False
 
         message_wo_quotes = re.sub(r'^>.*\n?', '', activity.message, flags=re.MULTILINE)
-        for match in re.finditer(r'^(\#regzbot |Link: |Closes: |.*)?(\n)?((http://|https://)\S*)', message_wo_quotes, re.MULTILINE | re.IGNORECASE):
+        for match in re.finditer(
+            r'^(\#regzbot |Link: |Closes: |.*)?(\n)?((http://|https://)\S*)',
+            message_wo_quotes,
+            re.MULTILINE | re.IGNORECASE,
+        ):
             linktag = False
             url = False
 
@@ -453,24 +514,31 @@ def process_activity(activity, *, triggering_repact=None, actimon=None):
 
             if linktag is True:
                 cmd_stack = RbCmdStackNew(activity, regression)
-                cmd_stack._add_command('relate', "%s %s [implicit due to Link/Closes tag]" %
-                                       (activity.web_url, activity.summary))
+                cmd_stack._add_command(
+                    'relate',
+                    '%s %s [implicit due to Link/Closes tag]'
+                    % (activity.web_url, activity.summary),
+                )
                 cmd_stack.process_commands()
             elif url:
                 cmd_stack = RbCmdStackNew(activity, regression)
-                cmd_stack._add_command('note', "%s %s [implicit due to link]" % (url, activity.summary))
+                cmd_stack._add_command(
+                    'note', '%s %s [implicit due to link]' % (url, activity.summary)
+                )
                 cmd_stack.process_commands()
 
     def _handle_msgs_mentioning_culprits(activity):
         open_regressions = {}
-        for match in re.finditer('^(Fixes: )([0-9,a-e]{12})', activity.message, re.MULTILINE):
+        for match in re.finditer(
+            '^(Fixes: )([0-9,a-e]{12})', activity.message, re.MULTILINE
+        ):
             # only fill this now, as we only need it if we found a Fixes: tag
             if len(open_regressions) == 0:
                 for regression in regzbot.RegressionBasic.get_all(only_unsolved=True):
                     if '..' not in regression.introduced:
                         open_regressions[regression.regid] = regression.introduced[0:12]
 
-            if not match.group(2) in open_regressions.values():
+            if match.group(2) not in open_regressions.values():
                 continue
             for regid in open_regressions.keys():
                 if not open_regressions[regid] == match.group(2):
@@ -481,9 +549,16 @@ def process_activity(activity, *, triggering_repact=None, actimon=None):
                     continue
 
                 # no activity, only a history entry, as it might be about different bug in the same commit
-                regzbot.RegHistory.event(regid, activity.gmtime, activity.reptrd.id, activity.summary,
-                                         activity.realname, repsrcid=activity.repsrc.id,
-                                         regzbotcmd='note: "%s" contains a \'Fixes:\' tag for the culprit of this regression' % activity.summary)
+                regzbot.RegHistory.event(
+                    regid,
+                    activity.gmtime,
+                    activity.reptrd.id,
+                    activity.summary,
+                    activity.realname,
+                    repsrcid=activity.repsrc.id,
+                    regzbotcmd='note: "%s" contains a \'Fixes:\' tag for the culprit of this regression'
+                    % activity.summary,
+                )
 
     if 'until' in regzbot._TESTING and activity.created_at >= regzbot._TESTING['until']:
         logger.debug('[rbcmd] skip processing %s', activity.web_url)
@@ -506,12 +581,13 @@ def process_activity(activity, *, triggering_repact=None, actimon=None):
         raise RegressionCreatedException
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     __TESTDATA = []
     # __TESTDATA.append("#regzbot introduced foo")
     # __TESTDATA.append("#regzbot introduced foo\n#regzbot title bar")
     __TESTDATA.append(
-        "#regzbot  introduced\nfoo bar \nand more for and bar; and foobar, too;\n#regzbot ignore; #regzbot title foo;\n#regzbot title: baz;")
+        '#regzbot  introduced\nfoo bar \nand more for and bar; and foobar, too;\n#regzbot ignore; #regzbot title foo;\n#regzbot title: baz;'
+    )
     for i in __TESTDATA:
         print('#########')
         print('"""\n%s """' % i)

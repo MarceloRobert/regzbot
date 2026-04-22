@@ -13,17 +13,19 @@ from functools import cached_property
 from regzbot import PatchKind
 import regzbot._repsources._trackers
 
-if __name__ != "__main__":
+if __name__ != '__main__':
     import regzbot
+
     logger = regzbot.logger
 else:
     import logging
+
     logger = logging
     if False:
         # if True:
         logger.basicConfig(level=logging.DEBUG)
-        logging.getLogger("urllib3").setLevel(logging.WARNING)
-        logging.getLogger("github").setLevel(logging.WARNING)
+        logging.getLogger('urllib3').setLevel(logging.WARNING)
+        logging.getLogger('github').setLevel(logging.WARNING)
 
 _CACHE_INSTANCES = {}
 _CACHE_PROJECTS = {}
@@ -61,14 +63,17 @@ class GhActivity(regzbot._repsources._trackers._activity):
             self.summary = 'A commit referenced this issue'
             # there must be a better way to access this, but I failed to find one :/
             self.web_url = ghpy_event.commit_url.replace(
-                'api.github.com/repos/', 'github.com/').replace('/commits/', '/commit/')
+                'api.github.com/repos/', 'github.com/'
+            ).replace('/commits/', '/commit/')
         elif ghpy_event.event == 'closed':
             self.message = ''
             self.summary = 'Status is now: closed'
             # there must be a better way to access this, but I failed to find one :/
             self.web_url = gh_issue.web_url
         else:
-            logger.critical('[github] GhActivity called with an unknown event; aborting.')
+            logger.critical(
+                '[github] GhActivity called with an unknown event; aborting.'
+            )
             sys.exit(1)
 
     @cached_property
@@ -80,7 +85,7 @@ class GhActivity(regzbot._repsources._trackers._activity):
         return PatchKind.getby_commit_header(commit.commit.message)
 
 
-class GhInstance():
+class GhInstance:
     def __init__(self, instance_name, token):
         if instance_name != 'github.com':
             raise NotImplementedError
@@ -93,7 +98,9 @@ class GhInstance():
             logger.debug('[github] github.com: opening project %s', project_name)
             if len(_CACHE_PROJECTS) > 12:
                 del _CACHE_PROJECTS[(next(iter(_CACHE_PROJECTS)))]
-            _CACHE_PROJECTS[project_name] = GhProject(self, self._ghpy_instance.get_repo(project_name))
+            _CACHE_PROJECTS[project_name] = GhProject(
+                self, self._ghpy_instance.get_repo(project_name)
+            )
         return _CACHE_PROJECTS[project_name]
 
     def search_issues(self, pattern):
@@ -120,7 +127,7 @@ class GhIssue(regzbot._repsources._trackers._issue):
     def _activities(self):
         activities = []
         activities.append(GhActivity(self, None))
-        logger.debug("[github] %s: retrieving events", self.web_url[8:])
+        logger.debug('[github] %s: retrieving events', self.web_url[8:])
         comment_count = 0
         for event in self._ghpy_issue.get_timeline():
             # ignore 'mentioned' and 'subscribed'; also 'cross-referenced' for
@@ -147,12 +154,16 @@ class GhIssue(regzbot._repsources._trackers._issue):
     def comments(self, since):
         # pygithub get_events for issues only allows to retrieve all events; to reduce the network load thus first
         # check only the latest comments, as that is possible with pygithub;
-        logger.debug("[github] %s: retrieving comments submitted since %s", self.web_url[8:], since)
+        logger.debug(
+            '[github] %s: retrieving comments submitted since %s',
+            self.web_url[8:],
+            since,
+        )
         for comment in self._ghpy_issue.comments(since=since):
             yield comment
 
 
-class GhProject():
+class GhProject:
     def __init__(self, gh_instance, ghpy_project):
         self.gh_instance = gh_instance
         self._ghpy_project = ghpy_project
@@ -182,14 +193,20 @@ class GhProject():
     def search(self, pattern, since):
         search_string = ['is:issue']
         search_string.append('repo:%s' % self.name)
-        search_string.append('updated:>=%s' % (since.strftime("%Y-%m-%d")))
+        search_string.append('updated:>=%s' % (since.strftime('%Y-%m-%d')))
         search_string.append(pattern)
         for issue in self.gh_instance.search_issues(' '.join(search_string)):
             yield GhPossibleSearchHit(GhIssue(self, issue), pattern, since)
 
     def updated_issues(self, since):
-        logger.debug('[github] %s: retrieving issues updated since %s', self.web_url[8:], since, )
-        for issue in self._ghpy_project.get_issues(state='all', sort='updated', since=since):
+        logger.debug(
+            '[github] %s: retrieving issues updated since %s',
+            self.web_url[8:],
+            since,
+        )
+        for issue in self._ghpy_project.get_issues(
+            state='all', sort='updated', since=since
+        ):
             # skip merge requests
             if issue.pull_request:
                 continue
@@ -203,7 +220,9 @@ class GhPossibleSearchHit(regzbot._repsources._trackers._possible_search_result)
         super().__init__(gh_issue.id, pattern, since)
 
     def is_hit_in_submission(self):
-        if self.issue.created_at >= self._since and self._check_pattern(self.issue.message):
+        if self.issue.created_at >= self._since and self._check_pattern(
+            self.issue.message
+        ):
             return self.issue
 
     def matching_activities(self):
@@ -246,12 +265,15 @@ class GhRepSrc(regzbot._repsources._trackers._repsrc):
     def _gh_project(self):
         parsed_url = urllib.parse.urlparse(self.serverurl)
         instance_name = parsed_url.netloc
-        project_name = parsed_url.path.strip("/")
+        project_name = parsed_url.path.strip('/')
 
         instance = connect(instance_name)
         project = instance.project(project_name)
         if self.serverurl != project.web_url:
-            logger.error("[github] self.serverurl (%s) and project.web_url (%s) do not match"  % (self.serverurl, project.web_url) )
+            logger.error(
+                '[github] self.serverurl (%s) and project.web_url (%s) do not match'
+                % (self.serverurl, project.web_url)
+            )
             raise AssertionError
         return project
 
@@ -314,16 +336,16 @@ def __test():
         'issue': {
             'total': 22,
             'issue_id': 4455,
-            'expected': '''<class '__main__.GhIssue'> => {'created_at': '2023-07-05 07:10:18+00:00', 'message': 'Commit 05cbb391aa8d2fd16c23bd43b9f1845e0a6dc333 introduced a regression.    Som…', 'realname': 'Sam Edwards', 'state': 'closed', 'summary': '[BUG] [Regression] Intel hda-dai doesn't recover gracefully from underruns; aud…', 'username': 'CFSworks', 'web_url': 'https://github.com/thesofproject/linux/issues/4455'}'''
+            'expected': """<class '__main__.GhIssue'> => {'created_at': '2023-07-05 07:10:18+00:00', 'message': 'Commit 05cbb391aa8d2fd16c23bd43b9f1845e0a6dc333 introduced a regression.    Som…', 'realname': 'Sam Edwards', 'state': 'closed', 'summary': '[BUG] [Regression] Intel hda-dai doesn't recover gracefully from underruns; aud…', 'username': 'CFSworks', 'web_url': 'https://github.com/thesofproject/linux/issues/4455'}""",
         },
         'comments_recent': {
             'since': datetime.datetime.fromisoformat('2023-07-23T03:17:13.35Z'),
-            'expected': '''<class '__main__.GhActivity'> => {'created_at': '2023-07-24 15:45:04+00:00', 'message': '@CFSworks I have updated the PR now. Could you please help check if it applies …', 'realname': 'Ranjani Sridharan', 'summary': 'github.com/thesofproject/linux/issues/4455, issue 4455: new comment (#10)', 'username': 'ranj063', 'web_url': 'https://github.com/thesofproject/linux/issues/4455#issuecomment-1648167580'}'''
+            'expected': """<class '__main__.GhActivity'> => {'created_at': '2023-07-24 15:45:04+00:00', 'message': '@CFSworks I have updated the PR now. Could you please help check if it applies …', 'realname': 'Ranjani Sridharan', 'summary': 'github.com/thesofproject/linux/issues/4455, issue 4455: new comment (#10)', 'username': 'ranj063', 'web_url': 'https://github.com/thesofproject/linux/issues/4455#issuecomment-1648167580'}""",
         },
         'commits_recent': {
             'since': datetime.datetime.fromisoformat('2023-07-24 20:10:17+00:00'),
-            'expected': '''<class '__main__.GhActivity'> => {'created_at': '2023-07-24 20:10:18+00:00', 'message': '', 'realname': 'Ranjani Sridharan', 'summary': 'A commit referenced this issue', 'username': 'ranj063', 'web_url': 'https://github.com/ranj063/linux/commit/3dfc905dbeb49cb5363762ad133ee4478e1b43c…'}''',
-            'patchkind': 7
+            'expected': """<class '__main__.GhActivity'> => {'created_at': '2023-07-24 20:10:18+00:00', 'message': '', 'realname': 'Ranjani Sridharan', 'summary': 'A commit referenced this issue', 'username': 'ranj063', 'web_url': 'https://github.com/ranj063/linux/commit/3dfc905dbeb49cb5363762ad133ee4478e1b43c…'}""",
+            'patchkind': 7,
         },
         'search_since': {
             'pattern': 'https://bugzilla.kernel.org/show_bug.cgi.*id=217673',
@@ -334,15 +356,15 @@ def __test():
             'pattern': 'The comments in https://bugzilla.kernel.org/show_bug.cgi.*id=217673',
             'total': 1,
             'since': datetime.datetime.fromisoformat('2023-07-21T10:25:00.00Z'),
-            'expected': '''<class '__main__.GhActivity'> => {'created_at': '2023-07-21 10:28:54+00:00', 'message': 'I did a potentially duplicated new bug at https://github.com/thesofproject/linu…', 'realname': 'Kai Vehmanen', 'summary': 'github.com/thesofproject/linux/issues/4455, issue 4455: new comment (#7)', 'username': 'kv2019i', 'web_url': 'https://github.com/thesofproject/linux/issues/4455#issuecomment-1645363342'}'''
+            'expected': """<class '__main__.GhActivity'> => {'created_at': '2023-07-21 10:28:54+00:00', 'message': 'I did a potentially duplicated new bug at https://github.com/thesofproject/linu…', 'realname': 'Kai Vehmanen', 'summary': 'github.com/thesofproject/linux/issues/4455, issue 4455: new comment (#7)', 'username': 'kv2019i', 'web_url': 'https://github.com/thesofproject/linux/issues/4455#issuecomment-1645363342'}""",
         },
         'search_issue': {
             'pattern': 'Filing an issue to track https://bugzilla.kernel.org/show_bug.cgi.*id=217673',
             'since': datetime.datetime.fromisoformat('2023-07-21T10:22:00.00Z'),
             'total': 1,
-            'expected': '''<class '__main__.GhActivity'> => {'created_at': '2023-07-21 10:23:48+00:00', 'message': 'Filing an issue to track https://bugzilla.kernel.org/show_bug.cgi?id=217673    …', 'realname': 'Kai Vehmanen', 'summary': 'github.com/thesofproject/linux/issues/4482, issue 4482: submission', 'username': 'kv2019i', 'web_url': 'https://github.com/thesofproject/linux/issues/4482'}'''
+            'expected': """<class '__main__.GhActivity'> => {'created_at': '2023-07-21 10:23:48+00:00', 'message': 'Filing an issue to track https://bugzilla.kernel.org/show_bug.cgi?id=217673    …', 'realname': 'Kai Vehmanen', 'summary': 'github.com/thesofproject/linux/issues/4482, issue 4482: submission', 'username': 'kv2019i', 'web_url': 'https://github.com/thesofproject/linux/issues/4482'}""",
         },
-        'search_days_updated': 4
+        'search_days_updated': 4,
     }
 
     def _testing_check_result(kind, value, expected):
@@ -353,9 +375,12 @@ def __test():
             print(" %s (unknown, apparently '%s')" % (kind, value))
             return
         else:
-            print('\n%s: mismatch; expected vs retrieved view:\n%s\n%s' % (kind, expected, value))
+            print(
+                '\n%s: mismatch; expected vs retrieved view:\n%s\n%s'
+                % (kind, expected, value)
+            )
             if len(sys.argv) < 3 or sys.argv[2] != '--warn':
-                print(" Aborting.")
+                print(' Aborting.')
                 sys.exit(1)
 
     # = setup =
@@ -369,70 +394,107 @@ def __test():
         sys.exit(1)
 
     parsed_url = urllib.parse.urlparse(TESTDATA['project'])
-    name_project = parsed_url.path.strip("/")
+    name_project = parsed_url.path.strip('/')
     instance = connect('github.com', token=sys.argv[1])
     project = instance.project(name_project)
 
     # = go =
-    print("Checking basic issue:", flush=True, end='')
+    print('Checking basic issue:', flush=True, end='')
     issue = project.issue(id=TESTDATA['issue']['issue_id'])
     _testing_check_result('data', str(issue), TESTDATA['issue']['expected'])
-    _testing_check_result('total', len(list(issue.activities())),
-                          TESTDATA['issue']['total'])
-    print("; succeeded.")
+    _testing_check_result(
+        'total', len(list(issue.activities())), TESTDATA['issue']['total']
+    )
+    print('; succeeded.')
 
-    print("Checking a comment:", flush=True, end='')
+    print('Checking a comment:', flush=True, end='')
     for comment in issue.activities(since=TESTDATA['comments_recent']['since']):
-        _testing_check_result('firsthit', str(comment), TESTDATA['comments_recent']['expected'])
+        _testing_check_result(
+            'firsthit', str(comment), TESTDATA['comments_recent']['expected']
+        )
         break
-    print("; succeeded.")
+    print('; succeeded.')
 
-    print("Checking a commit:", flush=True, end='')
+    print('Checking a commit:', flush=True, end='')
     for commit in issue.activities(since=TESTDATA['commits_recent']['since']):
-        _testing_check_result('firsthit', str(commit), TESTDATA['commits_recent']['expected'])
-        _testing_check_result('patchkind of firsthit', commit.patchkind, TESTDATA['commits_recent']['patchkind'])
+        _testing_check_result(
+            'firsthit', str(commit), TESTDATA['commits_recent']['expected']
+        )
+        _testing_check_result(
+            'patchkind of firsthit',
+            commit.patchkind,
+            TESTDATA['commits_recent']['patchkind'],
+        )
         break
-    print("; succeeded.")
+    print('; succeeded.')
 
     if 'search_since' in TESTDATA:
-        print("Checking search:", flush=True, end='')
+        print('Checking search:', flush=True, end='')
         results_search_broad = []
-        for result in project.search(TESTDATA['search_since']['pattern'], datetime.datetime.fromisoformat('2020-01-01T00:00:00.00Z')):
+        for result in project.search(
+            TESTDATA['search_since']['pattern'],
+            datetime.datetime.fromisoformat('2020-01-01T00:00:00.00Z'),
+        ):
             for hit in result._hits():
                 results_search_broad.append(hit)
         results_search_narrow = []
-        for result in project.search(TESTDATA['search_since']['pattern'], TESTDATA['search_since']['date']):
+        for result in project.search(
+            TESTDATA['search_since']['pattern'], TESTDATA['search_since']['date']
+        ):
             for hit in result._hits():
                 results_search_narrow.append(hit)
-        _testing_check_result('total', len(results_search_broad), TESTDATA['search_since']['total'])
-        _testing_check_result('difference', len(results_search_broad) - len(results_search_narrow), 1)
-        print("; succeeded.")
+        _testing_check_result(
+            'total', len(results_search_broad), TESTDATA['search_since']['total']
+        )
+        _testing_check_result(
+            'difference', len(results_search_broad) - len(results_search_narrow), 1
+        )
+        print('; succeeded.')
 
     if 'search_comment' in TESTDATA:
-        print("Checking search (pattern in comment):", flush=True, end='')
+        print('Checking search (pattern in comment):', flush=True, end='')
         results_search_comments = []
-        for result in project.search(TESTDATA['search_comment']['pattern'], since=TESTDATA['search_comment']['since']):
+        for result in project.search(
+            TESTDATA['search_comment']['pattern'],
+            since=TESTDATA['search_comment']['since'],
+        ):
             for hit in result._hits():
                 results_search_comments.append(hit)
-        _testing_check_result('firsthit', str(results_search_comments[0]), TESTDATA['search_comment']['expected'])
-        _testing_check_result('total', len(results_search_comments), TESTDATA['search_comment']['total'])
-        print("; succeeded.")
+        _testing_check_result(
+            'firsthit',
+            str(results_search_comments[0]),
+            TESTDATA['search_comment']['expected'],
+        )
+        _testing_check_result(
+            'total', len(results_search_comments), TESTDATA['search_comment']['total']
+        )
+        print('; succeeded.')
 
     if 'search_issue' in TESTDATA:
-        print("Checking search (pattern in issue):", flush=True, end='')
+        print('Checking search (pattern in issue):', flush=True, end='')
         results_search_issue = []
-        for result in project.search(TESTDATA['search_issue']['pattern'], since=TESTDATA['search_issue']['since']):
+        for result in project.search(
+            TESTDATA['search_issue']['pattern'], since=TESTDATA['search_issue']['since']
+        ):
             for hit in result._hits():
                 results_search_issue.append(hit)
-        _testing_check_result('firsthit', str(results_search_issue[0]), TESTDATA['search_issue']['expected'])
-        _testing_check_result('total', len(results_search_issue), TESTDATA['search_issue']['total'])
-        print("; succeeded.")
+        _testing_check_result(
+            'firsthit',
+            str(results_search_issue[0]),
+            TESTDATA['search_issue']['expected'],
+        )
+        _testing_check_result(
+            'total', len(results_search_issue), TESTDATA['search_issue']['total']
+        )
+        print('; succeeded.')
 
     print('All issues updated in the past %s days:' % TESTDATA['search_days_updated'])
-    since = datetime.datetime.now() - datetime.timedelta(days=TESTDATA['search_days_updated'])
+    since = datetime.datetime.now() - datetime.timedelta(
+        days=TESTDATA['search_days_updated']
+    )
     for issue in project.updated_issues(since):
         print(issue.web_url, issue.summary[0:80])
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     __test()

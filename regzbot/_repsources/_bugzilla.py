@@ -14,17 +14,19 @@ from functools import cached_property
 import regzbot._repsources._trackers
 from regzbot import PatchKind
 
-if __name__ != "__main__":
+if __name__ != '__main__':
     import regzbot
+
     logger = regzbot.logger
 else:
     import logging
+
     logger = logging
     if False:
         # if True:
         logger.basicConfig(level=logging.DEBUG)
-        logging.getLogger("bugzilla").setLevel(logging.WARNING)
-        logging.getLogger("urllib3").setLevel(logging.WARNING)
+        logging.getLogger('bugzilla').setLevel(logging.WARNING)
+        logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 
 _CACHE_INSTANCES = {}
@@ -43,7 +45,9 @@ class BzActivity(regzbot._repsources._trackers._activity):
             self._pybz_comment = comment
             self._creator = self._pybz_comment['creator']
             self._patchkind = None
-            self.created_at = datetime.datetime.fromisoformat(self._pybz_comment['creation_time'])
+            self.created_at = datetime.datetime.fromisoformat(
+                self._pybz_comment['creation_time']
+            )
             self.id = self._pybz_comment['count']
             self.message = self._pybz_comment['text']
             # username is available here, but is a email address we should not expose due to typical privacy policies
@@ -83,19 +87,24 @@ class BzActivity(regzbot._repsources._trackers._activity):
 
             bz_project = self.bz_issue.bz_project
             attachment = bz_project.attachment(
-                self._pybz_comment['attachment_id'], exclude_fields='data')
-            attachment_details = attachment['attachments'][str(self._pybz_comment['attachment_id'])]
+                self._pybz_comment['attachment_id'], exclude_fields='data'
+            )
+            attachment_details = attachment['attachments'][
+                str(self._pybz_comment['attachment_id'])
+            ]
             if attachment_details['is_patch'] is not True:
                 return False
             if attachment_details['content_type'] != 'text/plain':
                 return False
 
             # now get the attachment
-            attachment = bz_project.attachment(
-                self._pybz_comment['attachment_id'])
-            attachment_details = attachment['attachments'][str(self._pybz_comment['attachment_id'])]
+            attachment = bz_project.attachment(self._pybz_comment['attachment_id'])
+            attachment_details = attachment['attachments'][
+                str(self._pybz_comment['attachment_id'])
+            ]
             attachment_details['decoded_data'] = base64.b64decode(
-                attachment_details['data']).decode('utf-8')
+                attachment_details['data']
+            ).decode('utf-8')
             self._pybz_comment['attachment'] = attachment_details
             return True
 
@@ -105,7 +114,9 @@ class BzActivity(regzbot._repsources._trackers._activity):
             else:
                 self._summary = '%s: new comment (#%s)' % (self.summary_prefix, self.id)
             if is_patch_in_attachment():
-                self._patchkind = PatchKind.getby_content(self._pybz_comment['attachment']['decoded_data'])
+                self._patchkind = PatchKind.getby_content(
+                    self._pybz_comment['attachment']['decoded_data']
+                )
                 self._summary = '%s with patch' % self._summary
             else:
                 self._patchkind = 0
@@ -114,7 +125,7 @@ class BzActivity(regzbot._repsources._trackers._activity):
 
 # mock class to stay in line with what _gitlab.py and _github.py do, as with
 # bugzilla it makes no sense to differentiate between a instance and a project
-class BzInstance():
+class BzInstance:
     def __init__(self, url, token):
         logger.debug('[bugzilla] %s: connecting', url.removeprefix('https://'))
         self._pybz_bugzilla = bugzilla.Bugzilla(url, force_rest=True, api_key=token)
@@ -126,16 +137,27 @@ class BzInstance():
 
 
 class BzIssue(regzbot._repsources._trackers._issue):
-    INCLUDE_FIELDS = ['attachment_id', 'creator', 'creation_time', 'id', 'status', 'summary']
+    INCLUDE_FIELDS = [
+        'attachment_id',
+        'creator',
+        'creation_time',
+        'id',
+        'status',
+        'summary',
+    ]
 
     def __init__(self, bz_project, _pybz_bug):
         self.bz_project = bz_project
         self._pybz_bug = _pybz_bug
 
         self.id = _pybz_bug.id
-        self.created_at = datetime.datetime.fromisoformat(_pybz_bug.creation_time.replace("Z", "+00:00"))
+        self.created_at = datetime.datetime.fromisoformat(
+            _pybz_bug.creation_time.replace('Z', '+00:00')
+        )
         self.message = ''
-        self.realname = self.bz_project.realname(_pybz_bug.creator, realname=_pybz_bug.creator_detail['real_name'])
+        self.realname = self.bz_project.realname(
+            _pybz_bug.creator, realname=_pybz_bug.creator_detail['real_name']
+        )
         self.state = _pybz_bug.status
         self.summary = _pybz_bug.summary
         self.web_url = '%s/show_bug.cgi?id=%s' % (bz_project.web_url, _pybz_bug.id)
@@ -169,7 +191,7 @@ class BzIssue(regzbot._repsources._trackers._issue):
             yield activity
 
 
-class BzProject():
+class BzProject:
     _usercache = {}
 
     def __init__(self, bz_bugzilla, pybz_bugzilla):
@@ -181,13 +203,22 @@ class BzProject():
         msg_suffix = ''
         if exclude_fields and 'data' in exclude_fields:
             msg_suffix = ' (without data)'
-        logger.debug("[bugzilla] %s: retrieving attachment-id '%s%s'", self.web_url[8:], attachment_ids, msg_suffix)
-        return self._pybz_bugzilla.get_attachments(None, attachment_ids, include_fields, exclude_fields)
+        logger.debug(
+            "[bugzilla] %s: retrieving attachment-id '%s%s'",
+            self.web_url[8:],
+            attachment_ids,
+            msg_suffix,
+        )
+        return self._pybz_bugzilla.get_attachments(
+            None, attachment_ids, include_fields, exclude_fields
+        )
 
     def issue(self, id):
-        logger.debug("[bugzilla] %s: retrieving metadata for issue '%s'", self.web_url[8:], id)
+        logger.debug(
+            "[bugzilla] %s: retrieving metadata for issue '%s'", self.web_url[8:], id
+        )
         query = self._pybz_bugzilla.build_query()
-        query["include_fields"] = BzIssue.INCLUDE_FIELDS
+        query['include_fields'] = BzIssue.INCLUDE_FIELDS
         query['bug_id'] = id
         for result in self._pybz_bugzilla.query(query):
             return BzIssue(self, result)
@@ -195,7 +226,11 @@ class BzProject():
     def realname(self, creator, *, realname=None):
         if creator not in self._usercache:
             if realname is None:
-                logger.debug('[bugzilla] %s: retrieving details for creator %s', self.web_url[8:], creator)
+                logger.debug(
+                    '[bugzilla] %s: retrieving details for creator %s',
+                    self.web_url[8:],
+                    creator,
+                )
                 realname = self._pybz_bugzilla.getuser(creator).real_name
             if not realname:
                 # do what bugzilla does in case realname is unset: use first half of email address
@@ -205,8 +240,12 @@ class BzProject():
 
     def search(self, pattern, since, *, until=None):
         if since:
-            logger.debug("[bugzilla] %s: searching for '%s' in comments updated after %s",
-                         self.web_url[8:], pattern, since)
+            logger.debug(
+                "[bugzilla] %s: searching for '%s' in comments updated after %s",
+                self.web_url[8:],
+                pattern,
+                since,
+            )
         else:
             logger.debug("[bugzilla] %s: searching for '%s'", self.web_url[8:], pattern)
         query = self._pybz_bugzilla.build_query()
@@ -215,43 +254,57 @@ class BzProject():
         #  query["longdesc_type"] = 'casesubstring'
         #  query["query_format"] = 'advanced'
         # hence approach things from a different angle:
-        query["f1"] = 'longdesc'
-        query["o1"] = 'casesubstring'
-        query["v1"] = pattern
-        query["query_format"] = 'advanced'
-        query["include_fields"] = BzIssue.INCLUDE_FIELDS
-        query["j_top"] = 'AND_G'
-        query["f2"] = 'longdesc'
-        query["o2"] = 'changedafter'
-        query["v2"] = since.strftime("%Y-%m-%d-%H:%M:%S")
-        query["f3"] = 'longdesc'
-        query["o3"] = 'changedbefore'
+        query['f1'] = 'longdesc'
+        query['o1'] = 'casesubstring'
+        query['v1'] = pattern
+        query['query_format'] = 'advanced'
+        query['include_fields'] = BzIssue.INCLUDE_FIELDS
+        query['j_top'] = 'AND_G'
+        query['f2'] = 'longdesc'
+        query['o2'] = 'changedafter'
+        query['v2'] = since.strftime('%Y-%m-%d-%H:%M:%S')
+        query['f3'] = 'longdesc'
+        query['o3'] = 'changedbefore'
         if until:
-            query["v3"] = until.strftime("%Y-%m-%d-%H:%M:%S")
+            query['v3'] = until.strftime('%Y-%m-%d-%H:%M:%S')
         else:
-            query["v3"] = 'Now'
+            query['v3'] = 'Now'
 
         for result in self._pybz_bugzilla.query(query):
-            if 'bugzilla-only-ids' in regzbot._TESTING and result.id not in regzbot._TESTING['bugzilla-only-ids']:
+            if (
+                'bugzilla-only-ids' in regzbot._TESTING
+                and result.id not in regzbot._TESTING['bugzilla-only-ids']
+            ):
                 continue
             yield BzPossibleSearchHit(BzIssue(self, result), pattern, since)
 
     def updated_issues(self, since, until=None):
         if until:
-            logger.debug("[bugzilla] %s: retrieving list of issues updated between '%s' and '%s'",
-                         self.web_url[8:], since, until)
+            logger.debug(
+                "[bugzilla] %s: retrieving list of issues updated between '%s' and '%s'",
+                self.web_url[8:],
+                since,
+                until,
+            )
         else:
-            logger.debug("[bugzilla] %s: retrieving list of issues updated since '%s'", self.web_url[8:], since)
+            logger.debug(
+                "[bugzilla] %s: retrieving list of issues updated since '%s'",
+                self.web_url[8:],
+                since,
+            )
         query = self._pybz_bugzilla.build_query()
-        query["include_fields"] = BzIssue.INCLUDE_FIELDS
-        query["chfieldfrom"] = since.strftime("%Y-%m-%d-%H:%M:%S")
+        query['include_fields'] = BzIssue.INCLUDE_FIELDS
+        query['chfieldfrom'] = since.strftime('%Y-%m-%d-%H:%M:%S')
         if until:
-            query["chfieldto"] = until.strftime("%Y-%m-%d-%H:%M:%S")
+            query['chfieldto'] = until.strftime('%Y-%m-%d-%H:%M:%S')
         else:
-            query["chfieldto"] = 'Now'
+            query['chfieldto'] = 'Now'
 
         for result in self._pybz_bugzilla.query(query):
-            if 'bugzilla-only-ids' in regzbot._TESTING and result.id not in regzbot._TESTING['bugzilla-only-ids']:
+            if (
+                'bugzilla-only-ids' in regzbot._TESTING
+                and result.id not in regzbot._TESTING['bugzilla-only-ids']
+            ):
                 continue
             yield BzIssue(self, result)
 
@@ -300,7 +353,9 @@ class BzRepSrc(regzbot._repsources._trackers._repsrc):
         if url_lowered.startswith(self.serverurl):
             # there might be a comma or something else that might need to be removed:
             # https://lore.kernel.org/linux-wireless/170844096394.7.10031732457351764961.271076804@slmail.me/
-            stripped = ''.join(filter(str.isdigit, url_parsed.query.removeprefix('id=')))
+            stripped = ''.join(
+                filter(str.isdigit, url_parsed.query.removeprefix('id='))
+            )
             if not stripped:
                 return False
             return int(stripped)
@@ -315,7 +370,7 @@ class BzRepSrc(regzbot._repsources._trackers._repsrc):
             if not id:
                 id = self.supports_url(url)
                 if not id:
-                    logger.error("[bugzilla] cound not parse %s", url)
+                    logger.error('[bugzilla] cound not parse %s', url)
                     raise regzbot.RepDownloadError
             issue = self._bz_project.issue(id)
         return BzRepTrd(self, issue)
@@ -354,23 +409,22 @@ def connect(instance_name, *, token=None):
 def __test():
     # main issue used for testing (chosen without much thought): https://bugzilla.kernel.org/show_bug.cgi?id=217678
     TESTDATA = {
-        'project': "https://bugzilla.kernel.org",
+        'project': 'https://bugzilla.kernel.org',
         'issue': {
             'total': 37,
             'issue_id': 217678,
-            'expected': '''<class '__main__.BzIssue'> => {'created_at': '2023-07-17 17:44:27+00:00', 'message': '', 'realname': 'hq.dev+kernel', 'state': 'RESOLVED', 'summary': 'Unexplainable packet drop starting at v6.4', 'username': '', 'web_url': 'https://bugzilla.kernel.org/show_bug.cgi?id=217678'}'''
+            'expected': """<class '__main__.BzIssue'> => {'created_at': '2023-07-17 17:44:27+00:00', 'message': '', 'realname': 'hq.dev+kernel', 'state': 'RESOLVED', 'summary': 'Unexplainable packet drop starting at v6.4', 'username': '', 'web_url': 'https://bugzilla.kernel.org/show_bug.cgi?id=217678'}""",
         },
         'comments_recent': {
             'since': datetime.datetime.fromisoformat('2023-10-17 04:39:50+00:00'),
-            'expected': '''<class '__main__.BzActivity'> => {'created_at': '2023-10-17 04:39:55+00:00', 'message': 'It is currently in next-queue. Since 6.6.-rc6 is already out, I hope it makes i…', 'realname': 'Tirthendu Sarkar', 'summary': 'bugzilla.kernel.org, issue 217678: new comment (#33)', 'username': '', 'web_url': 'https://bugzilla.kernel.org/show_bug.cgi?id=217678#c33'}'''
+            'expected': """<class '__main__.BzActivity'> => {'created_at': '2023-10-17 04:39:55+00:00', 'message': 'It is currently in next-queue. Since 6.6.-rc6 is already out, I hope it makes i…', 'realname': 'Tirthendu Sarkar', 'summary': 'bugzilla.kernel.org, issue 217678: new comment (#33)', 'username': '', 'web_url': 'https://bugzilla.kernel.org/show_bug.cgi?id=217678#c33'}""",
         },
         'commits_recent': {
             'count': None,
             'since': datetime.datetime.fromisoformat('2023-09-29 11:21:10+00:00'),
-            'expected': '''<class '__main__.BzActivity'> => {'created_at': '2023-09-29 11:21:20+00:00', 'message': 'Created attachment 305161 Patch with temp fix and debug prints  Hi,  Thanks for…', 'realname': 'Tirthendu Sarkar', 'summary': 'bugzilla.kernel.org, issue 217678: new comment (#27) with patch', 'username': '', 'web_url': 'https://bugzilla.kernel.org/show_bug.cgi?id=217678#c27'}''',
-            'patchkind': 3
+            'expected': """<class '__main__.BzActivity'> => {'created_at': '2023-09-29 11:21:20+00:00', 'message': 'Created attachment 305161 Patch with temp fix and debug prints  Hi,  Thanks for…', 'realname': 'Tirthendu Sarkar', 'summary': 'bugzilla.kernel.org, issue 217678: new comment (#27) with patch', 'username': '', 'web_url': 'https://bugzilla.kernel.org/show_bug.cgi?id=217678#c27'}""",
+            'patchkind': 3,
         },
-
         'search_since': {
             'pattern': 'd42b1c47570eb2ed818dc3fe94b2678124af109d',
             'date': datetime.datetime.fromisoformat('2023-07-08 00:00:00+00:00'),
@@ -380,9 +434,9 @@ def __test():
             'pattern': 'd42b1c47570eb2ed818dc3fe94b2678124af109d',
             'total': 2,
             'since': datetime.datetime.fromisoformat('2023-07-18 03:40:27+00:00'),
-            'expected': '''<class '__main__.BzActivity'> => {'created_at': '2023-07-18 03:40:27+00:00', 'message': '(In reply to hq.dev+kernel from comment #4) > Created attachment 304648 [detail…', 'realname': 'Bagas Sanjaya', 'summary': 'bugzilla.kernel.org, issue 217678: new comment (#7)', 'username': '', 'web_url': 'https://bugzilla.kernel.org/show_bug.cgi?id=217678#c7'}'''
+            'expected': """<class '__main__.BzActivity'> => {'created_at': '2023-07-18 03:40:27+00:00', 'message': '(In reply to hq.dev+kernel from comment #4) > Created attachment 304648 [detail…', 'realname': 'Bagas Sanjaya', 'summary': 'bugzilla.kernel.org, issue 217678: new comment (#7)', 'username': '', 'web_url': 'https://bugzilla.kernel.org/show_bug.cgi?id=217678#c7'}""",
         },
-        'search_days_updated': 3
+        'search_days_updated': 3,
     }
 
     def _testing_check_result(kind, value, expected):
@@ -393,9 +447,12 @@ def __test():
             print(" %s (unknown, apparently '%s')" % (kind, value))
             return
         else:
-            print('\n%s: mismatch; expected vs retrieved view:\n%s\n%s' % (kind, expected, value))
+            print(
+                '\n%s: mismatch; expected vs retrieved view:\n%s\n%s'
+                % (kind, expected, value)
+            )
             if len(sys.argv) < 3 or sys.argv[2] != '--warn':
-                print(" Aborting.")
+                print(' Aborting.')
                 sys.exit(1)
 
     # = setup =
@@ -412,66 +469,104 @@ def __test():
     project = instance.project()
 
     # = go =
-    print("Checking basic issue:", flush=True, end='')
+    print('Checking basic issue:', flush=True, end='')
     issue = project.issue(TESTDATA['issue']['issue_id'])
     _testing_check_result('data', str(issue), TESTDATA['issue']['expected'])
-    _testing_check_result('total', len(list(issue.activities())),
-                          TESTDATA['issue']['total'])
-    print("; succeeded.")
+    _testing_check_result(
+        'total', len(list(issue.activities())), TESTDATA['issue']['total']
+    )
+    print('; succeeded.')
 
-    print("Checking a comment:", flush=True, end='')
+    print('Checking a comment:', flush=True, end='')
     for comment in issue.activities(since=TESTDATA['comments_recent']['since']):
-        _testing_check_result('firsthit', str(comment), TESTDATA['comments_recent']['expected'])
+        _testing_check_result(
+            'firsthit', str(comment), TESTDATA['comments_recent']['expected']
+        )
         break
-    print("; succeeded.")
+    print('; succeeded.')
 
-    print("Checking a commit:", flush=True, end='')
+    print('Checking a commit:', flush=True, end='')
     for commit in issue.activities(since=TESTDATA['commits_recent']['since']):
-        _testing_check_result('firsthit, ', str(commit), TESTDATA['commits_recent']['expected'])
-        _testing_check_result('patchkind of firsthit', commit.patchkind, TESTDATA['commits_recent']['patchkind'])
+        _testing_check_result(
+            'firsthit, ', str(commit), TESTDATA['commits_recent']['expected']
+        )
+        _testing_check_result(
+            'patchkind of firsthit',
+            commit.patchkind,
+            TESTDATA['commits_recent']['patchkind'],
+        )
         break
-    print("; succeeded.")
+    print('; succeeded.')
 
     if 'search_since' in TESTDATA:
-        print("Checking search:", flush=True, end='')
+        print('Checking search:', flush=True, end='')
         results_search_broad = []
-        for result in project.search(TESTDATA['search_since']['pattern'], datetime.datetime.fromisoformat('2020-01-01T00:00:00.00Z')):
+        for result in project.search(
+            TESTDATA['search_since']['pattern'],
+            datetime.datetime.fromisoformat('2020-01-01T00:00:00.00Z'),
+        ):
             for hit in result._hits():
                 results_search_broad.append(hit)
         results_search_narrow = []
-        for result in project.search(TESTDATA['search_since']['pattern'], TESTDATA['search_since']['date']):
+        for result in project.search(
+            TESTDATA['search_since']['pattern'], TESTDATA['search_since']['date']
+        ):
             for hit in result._hits():
                 results_search_narrow.append(hit)
-        _testing_check_result('total', len(results_search_broad), TESTDATA['search_since']['total'])
-        _testing_check_result('difference', len(results_search_broad) - len(results_search_narrow), 1)
-        print("; succeeded.")
+        _testing_check_result(
+            'total', len(results_search_broad), TESTDATA['search_since']['total']
+        )
+        _testing_check_result(
+            'difference', len(results_search_broad) - len(results_search_narrow), 1
+        )
+        print('; succeeded.')
 
     if 'search_comment' in TESTDATA:
-        print("Checking search (pattern in comment):", flush=True, end='')
+        print('Checking search (pattern in comment):', flush=True, end='')
         results_search_comments = []
-        for result in project.search(TESTDATA['search_comment']['pattern'], since=TESTDATA['search_comment']['since']):
+        for result in project.search(
+            TESTDATA['search_comment']['pattern'],
+            since=TESTDATA['search_comment']['since'],
+        ):
             for hit in result._hits():
                 results_search_comments.append(hit)
-        _testing_check_result('firsthit', str(results_search_comments[0]), TESTDATA['search_comment']['expected'])
-        _testing_check_result('total', len(results_search_comments), TESTDATA['search_comment']['total'])
-        print("; succeeded.")
+        _testing_check_result(
+            'firsthit',
+            str(results_search_comments[0]),
+            TESTDATA['search_comment']['expected'],
+        )
+        _testing_check_result(
+            'total', len(results_search_comments), TESTDATA['search_comment']['total']
+        )
+        print('; succeeded.')
 
     if 'search_issue' in TESTDATA:
-        print("Checking search (pattern in issue):", flush=True, end='')
+        print('Checking search (pattern in issue):', flush=True, end='')
         results_search_issue = []
-        for result in project.search(TESTDATA['search_issue']['pattern'], since=TESTDATA['search_issue']['since']):
+        for result in project.search(
+            TESTDATA['search_issue']['pattern'], since=TESTDATA['search_issue']['since']
+        ):
             for hit in result._hits():
                 results_search_issue.append(hit)
-        _testing_check_result('firsthit', str(results_search_issue[0]), TESTDATA['search_issue']['expected'])
-        _testing_check_result('total', len(results_search_issue), TESTDATA['search_issue']['total'])
-        print("; succeeded.")
+        _testing_check_result(
+            'firsthit',
+            str(results_search_issue[0]),
+            TESTDATA['search_issue']['expected'],
+        )
+        _testing_check_result(
+            'total', len(results_search_issue), TESTDATA['search_issue']['total']
+        )
+        print('; succeeded.')
 
-    print('All issues updated between %s and 7 days ago:' % TESTDATA['search_days_updated'])
+    print(
+        'All issues updated between %s and 7 days ago:'
+        % TESTDATA['search_days_updated']
+    )
     until = datetime.datetime.now() - datetime.timedelta(days=7)
     since = until - datetime.timedelta(days=TESTDATA['search_days_updated'])
     for issue in project.updated_issues(since, until=until):
         print(issue.web_url, issue.summary[0:80])
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     __test()

@@ -6,7 +6,6 @@ __author__ = 'Thorsten Leemhuis <linux@leemhuis.info>'
 
 
 import argparse
-import glob
 import logging
 import os
 import tempfile
@@ -85,12 +84,19 @@ def cmd():
     )
 
     # basics
-    parser.add_argument('--version', action='version',
-                        version=regzbot.__VERSION__)
-    parser.add_argument('--debug', action='store_true', default=False,
-                        help='Enable debugging info in output')
-    parser.add_argument('--quiet', action='store_true', default=False,
-                        help='Only print critical information')
+    parser.add_argument('--version', action='version', version=regzbot.__VERSION__)
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        default=False,
+        help='Enable debugging info in output',
+    )
+    parser.add_argument(
+        '--quiet',
+        action='store_true',
+        default=False,
+        help='Only print critical information',
+    )
 
     # subcommands
     subparsers = parser.add_subparsers(help='sub-command help', dest='subcmd')
@@ -109,7 +115,9 @@ def cmd():
 
     # recheck
     sparser_recheck = subparsers.add_parser('recheck', help='Recheck messages')
-    sparser_recheck.add_argument(dest='msgids_to_check', help='msgids to recheck', nargs='+')
+    sparser_recheck.add_argument(
+        dest='msgids_to_check', help='msgids to recheck', nargs='+'
+    )
     sparser_recheck.set_defaults(func=cmd_recheck)
 
     # status
@@ -120,10 +128,18 @@ def cmd():
     if get_testresults_datadir():
         sparser_test = subparsers.add_parser('test', help='run tests')
         sparser_test.add_argument(
-            '--tmpdir', dest='tmpdir', default=None, help='Directory for creating repos and mails for testing')
+            '--tmpdir',
+            dest='tmpdir',
+            default=None,
+            help='Directory for creating repos and mails for testing',
+        )
         for mode in regzbot.testing.SUPPORTED_TESTMODES.keys():
             sparser_test.add_argument(
-                '--%s' % mode, action='store_true', default=False, help='Run only %s tests' % mode)
+                '--%s' % mode,
+                action='store_true',
+                default=False,
+                help='Run only %s tests' % mode,
+            )
         sparser_test.set_defaults(func=cmd_test)
 
     # parse

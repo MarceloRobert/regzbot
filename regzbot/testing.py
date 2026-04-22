@@ -22,7 +22,7 @@ import regzbot.testing_trackers
 SUPPORTED_TESTMODES = {
     'offline': regzbot.testing_offline,
     'online': regzbot.testing_online,
-    'trackers': regzbot.testing_trackers
+    'trackers': regzbot.testing_trackers,
 }
 
 logger = regzbot.logger
@@ -30,14 +30,18 @@ logger = regzbot.logger
 
 def __get_resultfiles(path_testdata, path_tmpdir):
     if not os.path.isdir(path_testdata):
-        logger.critical("Directory for expexted results and template %s doesn't exist. Aborting.",
-                        path_testdata)
+        logger.critical(
+            "Directory for expexted results and template %s doesn't exist. Aborting.",
+            path_testdata,
+        )
         sys.exit(1)
 
     results_expected = {}
     results_generated = {}
     for mode in SUPPORTED_TESTMODES.keys():
-        results_expected[mode] = os.path.join(path_testdata, 'expected/results-%s.csv' % mode)
+        results_expected[mode] = os.path.join(
+            path_testdata, 'expected/results-%s.csv' % mode
+        )
         results_generated[mode] = os.path.join(path_tmpdir, 'testresults-%s.csv' % mode)
 
     return results_expected, results_generated
@@ -46,9 +50,10 @@ def __get_resultfiles(path_testdata, path_tmpdir):
 def check_results(results_expected, results_generated):
     def ask_user(results_expected, results_generated):
         answer = input(
-            "Enter 'm' to call meld; enter 'a' or 'y' to accept differences; simply hit enter to move on.")
+            "Enter 'm' to call meld; enter 'a' or 'y' to accept differences; simply hit enter to move on."
+        )
         if answer.lower() == 'm':
-            os.system("meld %s %s" % (results_expected, results_generated))
+            os.system('meld %s %s' % (results_expected, results_generated))
             return False
         if answer.lower() == 'a' or answer.lower() == 'y':
             shutil.copyfile(results_generated, results_expected)
@@ -56,7 +61,12 @@ def check_results(results_expected, results_generated):
 
     with open(results_expected, 'r') as file_expected:
         with open(results_generated, 'r') as file_generated:
-            if regzbot.db_diff(file_expected, file_generated, "%s" % results_expected, "%s" % results_generated):
+            if regzbot.db_diff(
+                file_expected,
+                file_generated,
+                '%s' % results_expected,
+                '%s' % results_generated,
+            ):
                 sys.stdout.write('#######\n')
                 while not ask_user(results_expected, results_generated):
                     pass
@@ -64,14 +74,12 @@ def check_results(results_expected, results_generated):
 
 def init(tmpdir):
     if len(glob.glob(os.path.join(tmpdir, '*'))) > 0:
-        logger.critical(
-            "aborting, the directory %s is not empty", tmpdir)
+        logger.critical('aborting, the directory %s is not empty', tmpdir)
         sys.exit(1)
 
 
 def run(testmodes, testdatapath, tmpdir):
-    results_expected, results_generated = __get_resultfiles(
-        testdatapath, tmpdir)
+    results_expected, results_generated = __get_resultfiles(testdatapath, tmpdir)
 
     for mode in SUPPORTED_TESTMODES.keys():
         if testmodes[mode]:

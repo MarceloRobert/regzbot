@@ -16,9 +16,15 @@ logger = regzbot.logger
 def init(tmpdir):
     regzbot.set_citesting('online')
     regzbot.basicressources_setup(
-        tmpdir=tmpdir, gittreesdir=True, databasedir=os.path.join(tmpdir, 'db-onlinetsts'))
+        tmpdir=tmpdir,
+        gittreesdir=True,
+        databasedir=os.path.join(tmpdir, 'db-onlinetsts'),
+    )
     regzbot.basicressources_init(
-        tmpdir=tmpdir, gittreesdir=True, databasedir=os.path.join(tmpdir, 'db-onlinetsts'))
+        tmpdir=tmpdir,
+        gittreesdir=True,
+        databasedir=os.path.join(tmpdir, 'db-onlinetsts'),
+    )
 
 
 def run(resultfilename, tmpdir, _):
@@ -37,18 +43,19 @@ def run(resultfilename, tmpdir, _):
         innercount = 0
         while '%s_%s_%s' % (testfuncprefix, outercount, innercount) in dir(this):
             # run test
-            callfunction = getattr(this, '%s_%s_%s' %
-                                   (testfuncprefix, outercount, innercount))
+            callfunction = getattr(
+                this, '%s_%s_%s' % (testfuncprefix, outercount, innercount)
+            )
             chk_mail, chk_git, wait = callfunction(
-                'test_%s_%s' % (outercount, innercount))
+                'test_%s_%s' % (outercount, innercount)
+            )
 
             if chk_git:
                 for gittree in regzbot.GitTree.getall():
                     gittree.update()
 
             # write results
-            resultfile.write('[%s_%s_%s]\n' %
-                             (testfuncprefix, outercount, innercount))
+            resultfile.write('[%s_%s_%s]\n' % (testfuncprefix, outercount, innercount))
             for data in regzbot.export_csv.dumpall_csv():
                 resultfile.write(data)
             resultfile.write('\n')
@@ -81,6 +88,7 @@ def onlntest_0_2(funcname):
     regzbot.checkout_msgid('438d711b-094b-fcfd-79e3-69f03a14df21@leemhuis.info')
     return False, False, False
 
+
 # the last mail in the thread will only find the report by walking the thread
 
 
@@ -95,6 +103,6 @@ def onlntest_1_0(funcname):
     return False, False, False
 
 
-#def onlntest_1_1(funcname):
+# def onlntest_1_1(funcname):
 #    regzbot.redo_regressions(['5edaa2b7c2fe4abd0347b8454b2ac032b6694e2c.camel@collabora.com', ])
 #    return False, False, False

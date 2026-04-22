@@ -13,23 +13,27 @@ from functools import cached_property
 from regzbot import PatchKind
 import regzbot._repsources._trackers
 
-if __name__ != "__main__":
+if __name__ != '__main__':
     import regzbot
+
     logger = regzbot.logger
 else:
     import logging
+
     logger = logging
     if False:
         # if True:
         logger.basicConfig(level=logging.DEBUG)
-        logging.getLogger("urllib3").setLevel(logging.WARNING)
+        logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 _CACHE_INSTANCES = {}
 _CACHE_PROJECTS = {}
 
 
 class GlActivity(regzbot._repsources._trackers._activity):
-    def __init__(self, gl_issue, *, comment=None, comment_number=None, commit=None, event=None):
+    def __init__(
+        self, gl_issue, *, comment=None, comment_number=None, commit=None, event=None
+    ):
         self.id = None
         self.patchkind = 0
         summary_prefix = '%s, issue %s' % (gl_issue.gl_project.longname, gl_issue.id)
@@ -48,24 +52,32 @@ class GlActivity(regzbot._repsources._trackers._activity):
             self.realname = comment.author['name']
             if commit:
                 self.patchkind = PatchKind.getby_commit_header(commit.message)
-                self.summary = '%s: gitlab noticed a commit referencing this issue' % summary_prefix
+                self.summary = (
+                    '%s: gitlab noticed a commit referencing this issue'
+                    % summary_prefix
+                )
             else:
-                self.summary = '%s: new comment (#%s)' % (summary_prefix, comment_number)
+                self.summary = '%s: new comment (#%s)' % (
+                    summary_prefix,
+                    comment_number,
+                )
             self.username = comment.author['username']
             self.web_url = '%s#note_%s' % (gl_issue.web_url, comment.id)
         elif event:
             self.created_at = datetime.datetime.fromisoformat(event.created_at)
             self.message = ''
             self.realname = event.user['name']
-            self.summary = "%s: state changed to: %s" % (summary_prefix, event.state)
+            self.summary = '%s: state changed to: %s' % (summary_prefix, event.state)
             self.username = event.user['username']
             self.web_url = gl_issue.web_url
         else:
-            logger.critical('[gitlab] GlActivity called with something unknown; aborting.')
+            logger.critical(
+                '[gitlab] GlActivity called with something unknown; aborting.'
+            )
             sys.exit(1)
 
 
-class GlInstance():
+class GlInstance:
     def __init__(self, netloc, token):
         logger.debug('[gitlab] %s: connecting', netloc)
         self.web_url = 'https://%s' % netloc
@@ -77,7 +89,9 @@ class GlInstance():
             logger.debug('[gitlab] %s: opening project %s', self.web_url, project_name)
             if len(_CACHE_PROJECTS) > 12:
                 del _CACHE_PROJECTS[(next(iter(_CACHE_PROJECTS)))]
-            _CACHE_PROJECTS[project_name] = GlProject(self, self._glpy_instance.projects.get(project_name))
+            _CACHE_PROJECTS[project_name] = GlProject(
+                self, self._glpy_instance.projects.get(project_name)
+            )
         return _CACHE_PROJECTS[project_name]
 
 
@@ -101,7 +115,7 @@ class GlIssue(regzbot._repsources._trackers._issue):
             # ohh boy, there must be a better way to do this, but I looked hard and did not find one :-/
             if type(comment.body) is set and comment.body[0] == 'mentioned in commit ':
                 commit_def = comment.body[1]
-            elif comment.body.startswith("mentioned in commit "):
+            elif comment.body.startswith('mentioned in commit '):
                 commit_def = comment.body[20:]
             else:
                 return None
@@ -109,7 +123,10 @@ class GlIssue(regzbot._repsources._trackers._issue):
             if '@' in commit_def:
                 projectname, hexsha = commit_def.split('@')
                 if '/' not in projectname:
-                    projectname = '%s/%s' % (self.gl_project.namespace_path, projectname)
+                    projectname = '%s/%s' % (
+                        self.gl_project.namespace_path,
+                        projectname,
+                    )
                 gl_instance = self.gl_project.gl_instance
                 project = gl_instance.project(projectname)
             else:
@@ -119,7 +136,11 @@ class GlIssue(regzbot._repsources._trackers._issue):
             try:
                 return project.commit(hexsha)
             except gitlab.exceptions.GitlabGetError:
-                logger.debug('[gitlab] %s: ignoring commit %s, download failed', self.web_url[8:], hexsha)
+                logger.debug(
+                    '[gitlab] %s: ignoring commit %s, download failed',
+                    self.web_url[8:],
+                    hexsha,
+                )
                 return None
 
         # walk comments (and thus commits) first, then events;
@@ -136,8 +157,14 @@ class GlIssue(regzbot._repsources._trackers._issue):
                 continue
             if not commit:
                 comment_counter += 1
-            activities.append(GlActivity(self, comment=comment, comment_number=comment_counter, commit=commit))
-        for event in self._glpy_issue.resourcestateevents.list(sort='asc', iterator=True):
+            activities.append(
+                GlActivity(
+                    self, comment=comment, comment_number=comment_counter, commit=commit
+                )
+            )
+        for event in self._glpy_issue.resourcestateevents.list(
+            sort='asc', iterator=True
+        ):
             activities.append(GlActivity(self, event=event))
 
         # sort
@@ -153,7 +180,7 @@ class GlIssue(regzbot._repsources._trackers._issue):
             yield activity
 
 
-class GlProject():
+class GlProject:
     def __init__(self, gl_instance, glpy_project):
         self.gl_instance = gl_instance
         self._glpy_project = glpy_project
@@ -183,25 +210,57 @@ class GlProject():
         additional_msg = ''
         if since:
             additional_msg = ' submitted after %s' % since
-        logger.debug("[gitlab] %s: searching for '%s' in issues%s", self.web_url[8:], pattern, additional_msg)
-        for searchresult in self._glpy_project.search(gitlab.const.SearchScope.ISSUES, pattern, order_by='updated_at', sort='asc', iterator=True):
+        logger.debug(
+            "[gitlab] %s: searching for '%s' in issues%s",
+            self.web_url[8:],
+            pattern,
+            additional_msg,
+        )
+        for searchresult in self._glpy_project.search(
+            gitlab.const.SearchScope.ISSUES,
+            pattern,
+            order_by='updated_at',
+            sort='asc',
+            iterator=True,
+        ):
             if datetime.datetime.fromisoformat(searchresult['created_at']) < since:
                 continue
-            yield GlPossibleSearchHit(self, searchresult['iid'], pattern, since, is_hit_in_submission=True)
-        logger.debug("[gitlab] %s: searching for '%s' in comments%s", self.web_url[8:], pattern, additional_msg)
-        for searchresult in self._glpy_project.search(gitlab.const.SearchScope.PROJECT_NOTES, pattern, order_by='updated_at', sort='asc', iterator=True):
+            yield GlPossibleSearchHit(
+                self, searchresult['iid'], pattern, since, is_hit_in_submission=True
+            )
+        logger.debug(
+            "[gitlab] %s: searching for '%s' in comments%s",
+            self.web_url[8:],
+            pattern,
+            additional_msg,
+        )
+        for searchresult in self._glpy_project.search(
+            gitlab.const.SearchScope.PROJECT_NOTES,
+            pattern,
+            order_by='updated_at',
+            sort='asc',
+            iterator=True,
+        ):
             if datetime.datetime.fromisoformat(searchresult['created_at']) < since:
                 continue
-            yield GlPossibleSearchHit(self, searchresult['noteable_iid'], pattern, since)
+            yield GlPossibleSearchHit(
+                self, searchresult['noteable_iid'], pattern, since
+            )
 
     def updated_issues(self, since):
-        logger.debug('[gitlab] %s: retrieving issues updated since %s', self.web_url[8:], since)
-        for issue in self._glpy_project.issues.list(iterator=True, order_by='updated_at', updated_after=since):
+        logger.debug(
+            '[gitlab] %s: retrieving issues updated since %s', self.web_url[8:], since
+        )
+        for issue in self._glpy_project.issues.list(
+            iterator=True, order_by='updated_at', updated_after=since
+        ):
             yield GlIssue(self, issue)
 
 
 class GlPossibleSearchHit(regzbot._repsources._trackers._possible_search_result):
-    def __init__(self, gl_project, issue_id, pattern, since, *, is_hit_in_submission=False):
+    def __init__(
+        self, gl_project, issue_id, pattern, since, *, is_hit_in_submission=False
+    ):
         self._gl_project = gl_project
         self._issue = None
         self._hit_in_submission = is_hit_in_submission
@@ -242,7 +301,7 @@ class GlRepSrc(regzbot._repsources._trackers._repsrc):
     def _gl_project(self):
         parsed_url = urllib.parse.urlparse(self.serverurl)
         instance_name = parsed_url.netloc
-        project_name = parsed_url.path.strip("/")
+        project_name = parsed_url.path.strip('/')
 
         instance = connect(instance_name)
         project = instance.project(project_name)
@@ -307,16 +366,16 @@ def __test():
         'issue': {
             'total': 16,
             'issue_id': 8357,
-            'expected': '''<class '__main__.GlIssue'> => {'created_at': '2023-04-11 16:17:04.368000+00:00', 'message': 'I'm working on a "hatch/jinlon" Chromebook which is a Cometlake-U device, and h…', 'realname': 'Ross Zwisler', 'state': 'closed', 'summary': 'CML-U: external 5120x2160 monitor can't play video', 'username': 'zwisler', 'web_url': 'https://gitlab.freedesktop.org/drm/intel/-/issues/8357'}'''
+            'expected': """<class '__main__.GlIssue'> => {'created_at': '2023-04-11 16:17:04.368000+00:00', 'message': 'I'm working on a "hatch/jinlon" Chromebook which is a Cometlake-U device, and h…', 'realname': 'Ross Zwisler', 'state': 'closed', 'summary': 'CML-U: external 5120x2160 monitor can't play video', 'username': 'zwisler', 'web_url': 'https://gitlab.freedesktop.org/drm/intel/-/issues/8357'}""",
         },
         'comments_recent': {
             'since': datetime.datetime.fromisoformat('2023-04-18T16:37:00.000Z'),
-            'expected': '''<class '__main__.GlActivity'> => {'created_at': '2023-04-18 16:37:48.523000+00:00', 'message': '[0001-drm-i915-Check-pipe-source-size-when-using-skl-scale.patch](/uploads/d3b7…', 'realname': 'Ville Syrjälä', 'summary': 'drm/intel, issue 8357: new comment (#4)', 'username': 'vsyrjala', 'web_url': 'https://gitlab.freedesktop.org/drm/intel/-/issues/8357#note_1873234'}'''
+            'expected': """<class '__main__.GlActivity'> => {'created_at': '2023-04-18 16:37:48.523000+00:00', 'message': '[0001-drm-i915-Check-pipe-source-size-when-using-skl-scale.patch](/uploads/d3b7…', 'realname': 'Ville Syrjälä', 'summary': 'drm/intel, issue 8357: new comment (#4)', 'username': 'vsyrjala', 'web_url': 'https://gitlab.freedesktop.org/drm/intel/-/issues/8357#note_1873234'}""",
         },
         'commits_recent': {
             'since': datetime.datetime.fromisoformat('2023-05-06T00:00:00.000Z'),
-            'expected': '''<class '__main__.GlActivity'> => {'created_at': '2023-05-17 19:20:40.224000+00:00', 'message': 'mentioned in commit superm1/linux@74a03d3c8d895a7d137bb4be8e40cae886f5d973', 'realname': 'Ville Syrjälä', 'summary': 'drm/intel, issue 8357: gitlab noticed a commit referencing this issue', 'username': 'vsyrjala', 'web_url': 'https://gitlab.freedesktop.org/drm/intel/-/issues/8357#note_1912677'}''',
-            'patchkind': 7
+            'expected': """<class '__main__.GlActivity'> => {'created_at': '2023-05-17 19:20:40.224000+00:00', 'message': 'mentioned in commit superm1/linux@74a03d3c8d895a7d137bb4be8e40cae886f5d973', 'realname': 'Ville Syrjälä', 'summary': 'drm/intel, issue 8357: gitlab noticed a commit referencing this issue', 'username': 'vsyrjala', 'web_url': 'https://gitlab.freedesktop.org/drm/intel/-/issues/8357#note_1912677'}""",
+            'patchkind': 7,
         },
         'search_since': {
             'pattern': '805f04d42a6b5f4187935b43c9c39ae03ccfa761',
@@ -327,15 +386,15 @@ def __test():
             'pattern': '805f04d42a6b5f4187935b43c9c39ae03ccfa761',
             'total': 1,
             'since': datetime.datetime.fromisoformat('2022-08-27 00:00:01+00:00'),
-            'expected': '''<class '__main__.GlActivity'> => {'created_at': '2022-08-27 13:26:12+00:00', 'message': 'After taking the twelve ehm 15 step program :D  $ git bisect log - bad: [f2906a…', 'realname': 'JackCasual', 'summary': 'drm/intel, issue 6652: new comment (#6)', 'username': 'JackCasual', 'web_url': 'https://gitlab.freedesktop.org/drm/intel/-/issues/6652#note_1526397'}'''
+            'expected': """<class '__main__.GlActivity'> => {'created_at': '2022-08-27 13:26:12+00:00', 'message': 'After taking the twelve ehm 15 step program :D  $ git bisect log - bad: [f2906a…', 'realname': 'JackCasual', 'summary': 'drm/intel, issue 6652: new comment (#6)', 'username': 'JackCasual', 'web_url': 'https://gitlab.freedesktop.org/drm/intel/-/issues/6652#note_1526397'}""",
         },
         'search_issue': {
             'pattern': '805f04d42a6b5f4187935b43c9c39ae03ccfa761',
             'since': datetime.datetime.fromisoformat('2022-08-26 00:00:01+00:00'),
             'total': 2,
-            'expected': '''<class '__main__.GlActivity'> => {'created_at': '2022-08-26 04:24:15.380000+00:00', 'message': 'I have a new Framework Laptop with an i7-1280P and Xe graphics, running Debian …', 'realname': 'Brian Tarricone', 'summary': 'drm/intel, issue 6679: submission', 'username': 'kelnos', 'web_url': 'https://gitlab.freedesktop.org/drm/intel/-/issues/6679'}'''
+            'expected': """<class '__main__.GlActivity'> => {'created_at': '2022-08-26 04:24:15.380000+00:00', 'message': 'I have a new Framework Laptop with an i7-1280P and Xe graphics, running Debian …', 'realname': 'Brian Tarricone', 'summary': 'drm/intel, issue 6679: submission', 'username': 'kelnos', 'web_url': 'https://gitlab.freedesktop.org/drm/intel/-/issues/6679'}""",
         },
-        'search_days_updated': 1
+        'search_days_updated': 1,
     }
 
     def _testing_check_result(kind, value, expected):
@@ -346,9 +405,12 @@ def __test():
             print(" %s (unknown, apparently '%s')" % (kind, value))
             return
         else:
-            print('\n%s: mismatch; expected vs retrieved view:\n%s\n%s' % (kind, expected, value))
+            print(
+                '\n%s: mismatch; expected vs retrieved view:\n%s\n%s'
+                % (kind, expected, value)
+            )
             if len(sys.argv) < 3 or sys.argv[2] != '--warn':
-                print(" Aborting.")
+                print(' Aborting.')
                 sys.exit(1)
 
     # = setup =
@@ -363,70 +425,107 @@ def __test():
 
     parsed_url = urllib.parse.urlparse(TESTDATA['project'])
     name_instance = parsed_url.netloc
-    name_project = parsed_url.path.strip("/")
+    name_project = parsed_url.path.strip('/')
     instance = connect(name_instance, token=sys.argv[1])
     project = instance.project(name_project)
 
     # = go =
-    print("Checking basic issue:", flush=True, end='')
+    print('Checking basic issue:', flush=True, end='')
     issue = project.issue(id=TESTDATA['issue']['issue_id'])
     _testing_check_result('data', str(issue), TESTDATA['issue']['expected'])
-    _testing_check_result('total', len(list(issue.activities())),
-                          TESTDATA['issue']['total'])
-    print("; succeeded.")
+    _testing_check_result(
+        'total', len(list(issue.activities())), TESTDATA['issue']['total']
+    )
+    print('; succeeded.')
 
-    print("Checking a comment:", flush=True, end='')
+    print('Checking a comment:', flush=True, end='')
     for comment in issue.activities(since=TESTDATA['comments_recent']['since']):
-        _testing_check_result('firsthit', str(comment), TESTDATA['comments_recent']['expected'])
+        _testing_check_result(
+            'firsthit', str(comment), TESTDATA['comments_recent']['expected']
+        )
         break
-    print("; succeeded.")
+    print('; succeeded.')
 
-    print("Checking a commit:", flush=True, end='')
+    print('Checking a commit:', flush=True, end='')
     for commit in issue.activities(since=TESTDATA['commits_recent']['since']):
-        _testing_check_result('firsthit, ', str(commit), TESTDATA['commits_recent']['expected'])
-        _testing_check_result('patchkind of firsthit', commit.patchkind, TESTDATA['commits_recent']['patchkind'])
+        _testing_check_result(
+            'firsthit, ', str(commit), TESTDATA['commits_recent']['expected']
+        )
+        _testing_check_result(
+            'patchkind of firsthit',
+            commit.patchkind,
+            TESTDATA['commits_recent']['patchkind'],
+        )
         break
-    print("; succeeded.")
+    print('; succeeded.')
 
     if 'search_since' in TESTDATA:
-        print("Checking search:", flush=True, end='')
+        print('Checking search:', flush=True, end='')
         results_search_broad = []
-        for result in project.search(TESTDATA['search_since']['pattern'], datetime.datetime.fromisoformat('2020-01-01T00:00:00.00Z')):
+        for result in project.search(
+            TESTDATA['search_since']['pattern'],
+            datetime.datetime.fromisoformat('2020-01-01T00:00:00.00Z'),
+        ):
             for hit in result._hits():
                 results_search_broad.append(hit)
         results_search_narrow = []
-        for result in project.search(TESTDATA['search_since']['pattern'], TESTDATA['search_since']['date']):
+        for result in project.search(
+            TESTDATA['search_since']['pattern'], TESTDATA['search_since']['date']
+        ):
             for hit in result._hits():
                 results_search_narrow.append(hit)
-        _testing_check_result('total', len(results_search_broad), TESTDATA['search_since']['total'])
-        _testing_check_result('difference', len(results_search_broad) - len(results_search_narrow), 1)
-        print("; succeeded.")
+        _testing_check_result(
+            'total', len(results_search_broad), TESTDATA['search_since']['total']
+        )
+        _testing_check_result(
+            'difference', len(results_search_broad) - len(results_search_narrow), 1
+        )
+        print('; succeeded.')
 
     if 'search_comment' in TESTDATA:
-        print("Checking search (pattern in comment):", flush=True, end='')
+        print('Checking search (pattern in comment):', flush=True, end='')
         results_search_comments = []
-        for result in project.search(TESTDATA['search_comment']['pattern'], since=TESTDATA['search_comment']['since']):
+        for result in project.search(
+            TESTDATA['search_comment']['pattern'],
+            since=TESTDATA['search_comment']['since'],
+        ):
             for hit in result._hits():
                 results_search_comments.append(hit)
-        _testing_check_result('firsthit', str(results_search_comments[0]), TESTDATA['search_comment']['expected'])
-        _testing_check_result('total', len(results_search_comments), TESTDATA['search_comment']['total'])
-        print("; succeeded.")
+        _testing_check_result(
+            'firsthit',
+            str(results_search_comments[0]),
+            TESTDATA['search_comment']['expected'],
+        )
+        _testing_check_result(
+            'total', len(results_search_comments), TESTDATA['search_comment']['total']
+        )
+        print('; succeeded.')
 
     if 'search_issue' in TESTDATA:
-        print("Checking search (pattern in issue):", flush=True, end='')
+        print('Checking search (pattern in issue):', flush=True, end='')
         results_search_issue = []
-        for result in project.search(TESTDATA['search_issue']['pattern'], since=TESTDATA['search_issue']['since']):
+        for result in project.search(
+            TESTDATA['search_issue']['pattern'], since=TESTDATA['search_issue']['since']
+        ):
             for hit in result._hits():
                 results_search_issue.append(hit)
-        _testing_check_result('firsthit', str(results_search_issue[0]), TESTDATA['search_issue']['expected'])
-        _testing_check_result('total', len(results_search_issue), TESTDATA['search_issue']['total'])
-        print("; succeeded.")
+        _testing_check_result(
+            'firsthit',
+            str(results_search_issue[0]),
+            TESTDATA['search_issue']['expected'],
+        )
+        _testing_check_result(
+            'total', len(results_search_issue), TESTDATA['search_issue']['total']
+        )
+        print('; succeeded.')
 
     print('All issues updated in the past %s days:' % TESTDATA['search_days_updated'])
-    since = datetime.datetime.now() - datetime.timedelta(days=TESTDATA['search_days_updated'])
+    since = datetime.datetime.now() - datetime.timedelta(
+        days=TESTDATA['search_days_updated']
+    )
     for issue in project.updated_issues(since):
         print(issue.web_url, issue.summary[0:80])
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     __test()
