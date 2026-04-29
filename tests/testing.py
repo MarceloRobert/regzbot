@@ -15,14 +15,14 @@ import sys
 import shutil
 
 import regzbot
-import regzbot.testing_offline
-import regzbot.testing_online
-import regzbot.testing_trackers
+import tests.testing_offline
+import tests.testing_online
+import tests.testing_trackers
 
 SUPPORTED_TESTMODES = {
-    'offline': regzbot.testing_offline,
-    'online': regzbot.testing_online,
-    'trackers': regzbot.testing_trackers,
+    'offline': tests.testing_offline,
+    'online': tests.testing_online,
+    'trackers': tests.testing_trackers,
 }
 
 logger = regzbot.logger
