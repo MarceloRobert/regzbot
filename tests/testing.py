@@ -13,16 +13,19 @@ import glob
 import os
 import sys
 import shutil
+from types import ModuleType
+from typing import Literal
 
 import regzbot
-import tests.testing_offline
-import tests.testing_online
-import tests.testing_trackers
+# aliasing the modules for direct referencing
+import tests.testing_offline as testing_offline
+import tests.testing_online as testing_online
+import tests.testing_trackers as testing_trackers
 
-SUPPORTED_TESTMODES = {
-    'offline': tests.testing_offline,
-    'online': tests.testing_online,
-    'trackers': tests.testing_trackers,
+SUPPORTED_TESTMODES: dict[Literal['offline', 'online', 'trackers'], ModuleType] = {
+    'offline': testing_offline,
+    'online': testing_online,
+    'trackers': testing_trackers,
 }
 
 logger = regzbot.logger

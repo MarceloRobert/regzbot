@@ -28,11 +28,15 @@ Now you are ready to run the setup command:
     ./regzbot.sh setup
 
 This command will run the setup and start the database file at `~/.local/share/regzbot/database.db`. If you need to re-run the setup command delete the db file manually first.
+<!-- Add more logging to the setup command -->
 
 ## add config file
 
 regzbot has a config file at `~/.config/regzbot/regzbot.cfg`. It is used for the bugzilla token.
 Go to [bugzilla.kernel.org](https://bugzilla.kernel.org/), get your API key and add it to the config file. Don't add any quote around the token string.
+<!-- What if I don't want to create an account on bugzilla? -->
+<!-- "get you api key" is a bit too broad, be more specific on where to get it.
+After logged in, Preferences > API Keys -->
 
 ```
 [bugzilla.kernel.org]
@@ -46,6 +50,7 @@ Now you are ready to run regzbot
     ./regzbot.sh run
 
 It will generate web reports at `~/.cache/regzbot/websites/`
+<!-- Add more logs to what's happening -->
 
 ## Development tools
 

@@ -27,7 +27,6 @@ import regzbot._repsources._lore
 
 logger = regzbot.logger
 
-gittrees_testing = dict()
 emaildirs = dict()
 
 MAIL_TEMPLATE = string.Template(
@@ -291,6 +290,9 @@ class TestingGitTree:
         self.repo.git.reset('--hard', self._hashes_afterinit[-1])
 
 
+gittrees_testing: dict[str, TestingGitTree] = dict()
+
+
 def update_gittrees():
     for gittree in regzbot.GitTree.getall():
         gittree.update()
@@ -301,7 +303,7 @@ def emaildirs_clear():
         emaildirs[emaildir].clear()
 
 
-def populatetree_linux(gittree_testing):
+def populatetree_linux(gittree_testing: TestingGitTree) -> None:
     gittree_testing.mv()
     gittree_testing.tag('v1.8')
     gittree_testing.mv()
@@ -337,7 +339,7 @@ def gittree_testing_prep_linux_next(repo):
     masterref.checkout()
 
 
-def populatetree_linux_next(gittree_testing):
+def populatetree_linux_next(gittree_testing: TestingGitTree) -> None:
     gittree_testing.mv()
     gittree_testing.tag('next-20190101')
     gittree_testing.mv()
@@ -354,14 +356,14 @@ def gittree_testing_prep_linux_stable(repo):
     repo.create_head('linux-1.10.y', commit='v1.10')
 
 
-def populatetree_linux_stable18(gittree_testing):
+def populatetree_linux_stable18(gittree_testing: TestingGitTree) -> None:
     gittree_testing.mv()
     gittree_testing.tag('v1.8.1')
     gittree_testing.mv()
     gittree_testing.tag('v1.8.2')
 
 
-def populatetree_linux_stable110(gittree_testing):
+def populatetree_linux_stable110(gittree_testing: TestingGitTree) -> None:
     gittree_testing.mv()
     gittree_testing.tag('v1.10.1')
     gittree_testing.mv()
@@ -480,6 +482,15 @@ def init_mailsdir(path_tmpmail):
 
 def init(tmpdir, testdatadir):
     regzbot.set_citesting('offline')
+    # set ci testing
+    # get config directory paths
+    # create tmp file for test results
+    # create tmp folder for mails
+    # create db (skip if already exists)
+    # assert db exists and assert config file and other dirs
+    # init repository dirs and update db with it
+    # init mails dir and update db with it
+    # update db
 
     _, databasedir, gittreesdir, _ = regzbot.basicressources_get_dirs(
         tmpdir=tmpdir, databasedir=os.path.join(tmpdir, 'db-offlinetsts')
@@ -501,6 +512,7 @@ def init(tmpdir, testdatadir):
         gittrees_testing[gittree_testing].init_done()
 
 
+# Start here
 def run(resultfilename, tmpdir, testdatadir):
     init(tmpdir, testdatadir)
 
