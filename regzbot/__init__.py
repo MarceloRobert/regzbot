@@ -3299,16 +3299,24 @@ class ReportSource:
         self.mininterval = mininterval
 
     def __new__(cls, *args, **kwargs):
+        # _repsources means "report sources", not "resources"
+        # This __new__ command "kind of" "imports" from the subdirectories.
+        # TODO: Check if importing is the right move here.
         if args[4] == 'bugzilla':
-            return super().__new__(_repsources._bugzilla.BzRepSrc)
+            import regzbot._repsources._bugzilla as _bugzilla
+            return super().__new__(_bugzilla.BzRepSrc)
         elif args[4] == 'gitlab':
-            return super().__new__(_repsources._gitlab.GlRepSrc)
+            import regzbot._repsources._gitlab as _gitlab
+            return super().__new__(_gitlab.GlRepSrc)
         elif args[4] == 'github':
-            return super().__new__(_repsources._github.GhRepSrc)
+            import regzbot._repsources._github as _github
+            return super().__new__(_github.GhRepSrc)
         elif args[4] == 'generic':
-            return super().__new__(_repsources._generic.GenRepSrc)
+            import regzbot._repsources._generic as _generic
+            return super().__new__(_generic.GenRepSrc)
         elif args[4] == 'lore':
-            return super().__new__(_repsources._lore.LoRepSrc)
+            import regzbot._repsources._lore as _lore
+            return super().__new__(_lore.LoRepSrc)
         else:
             return super().__new__(cls)
 

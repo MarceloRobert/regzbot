@@ -12,7 +12,7 @@ import tempfile
 import sys
 
 import regzbot
-import regzbot.testing
+import tests.testing
 import regzbot._rbcmd
 import regzbot._repsources
 import regzbot._repsources._bugzilla
@@ -59,10 +59,10 @@ def cmd_test(cmdargs):
     cmdargs_dict = vars(cmdargs)
     testmodes = {}
     only = ''
-    for mode in regzbot.testing.SUPPORTED_TESTMODES.keys():
+    for mode in tests.testing.SUPPORTED_TESTMODES.keys():
         if cmdargs_dict[mode]:
             only = mode
-    for mode in regzbot.testing.SUPPORTED_TESTMODES.keys():
+    for mode in tests.testing.SUPPORTED_TESTMODES.keys():
         if only and only != mode:
             testmodes[mode] = False
         else:
@@ -70,10 +70,10 @@ def cmd_test(cmdargs):
 
     # run
     if cmdargs.tmpdir:
-        regzbot.testing.run(testmodes, get_testresults_datadir(), cmdargs.tmpdir)
+        tests.testing.run(testmodes, get_testresults_datadir(), cmdargs.tmpdir)
     else:
         with tempfile.TemporaryDirectory() as tmpdir:
-            regzbot.testing.run(testmodes, get_testresults_datadir(), tmpdir)
+            tests.testing.run(testmodes, get_testresults_datadir(), tmpdir)
 
 
 def cmd():
@@ -133,7 +133,7 @@ def cmd():
             default=None,
             help='Directory for creating repos and mails for testing',
         )
-        for mode in regzbot.testing.SUPPORTED_TESTMODES.keys():
+        for mode in tests.testing.SUPPORTED_TESTMODES.keys():
             sparser_test.add_argument(
                 '--%s' % mode,
                 action='store_true',
